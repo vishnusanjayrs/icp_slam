@@ -111,6 +111,8 @@ protected:
 
   boost::atomic_bool is_tracker_running_;
 
+  unsigned int keyframe_count_ = 0;
+
 }; // class ICPSlam
 } // namespace icp_slam
 #endif //ICP_SLAM_ICP_SLAM_H

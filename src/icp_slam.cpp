@@ -39,10 +39,29 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
     ROS_WARN_THROTTLE(1.0, "Couldn't track frame, tracker already running");
     return false;
   }
+  // for the first time . set the first odom frame as keyframe and as well as map frame
+  is_tracker_running_=true;
+  if (keyframe_count_ == 0) 
+  {
+    last_kf_tf_odom_laser_ = current_frame_tf_odom_laser;
+    last_kf_tf_map_laser_ = current_frame_tf_odom_laser;
+    wheel_encoder_laser_scan_ = laser_scan;
+    last_kf_laser_scan_ = laser_scan;
+    tf_map_laser = current_frame_tf_odom_laser;
+    ROS_INFO("First keyframe");
+    keyframe_count_++;
+  }
+  
+  if (isCreateKeyframe(current_frame_tf_odom_laser,last_kf_tf_odom_laser_))
+  {
+    ROS_INFO("keyframe created");
+  }
 
   // TODO: find the pose of laser in map frame
   // if a new keyframe is created, run ICP
   // if not a keyframe, obtain the laser pose in map frame based on odometry update
+  is_tracker_running_=false;
+  return false;
 }
 
 bool ICPSlam::isCreateKeyframe(const tf::StampedTransform &current_frame_tf, const tf::StampedTransform &last_kf_tf) const
@@ -59,17 +78,18 @@ bool ICPSlam::isCreateKeyframe(const tf::StampedTransform &current_frame_tf, con
   auto last_kf_y = last_kf_tf.getOrigin().getY();
   auto last_kf_rotation = tf::getYaw(last_kf_tf.getRotation()) * 180/M_PI;
 
-  auto distance = sqrt(pow((current_x - last_kf_x),2)_ + pow((current_y - last_kf_y),2));
+  auto distance = sqrt(pow((current_x - last_kf_x),2)+pow((current_y - last_kf_y),2));
   auto rotation_diff = abs(last_kf_rotation - current_rotation);
 
   auto current_time = ros::Time::now().toSec();
-  auto last_kf_time = last_kf_tf.stamp_;
+  auto last_kf_time = last_kf_tf.stamp_.toSec();
 
   auto last_kf_age = current_time - last_kf_time ;
 
+  ROS_INFO("robot pose: (%f, %f), %f",current_x,current_y, current_rotation);
+
   if ((distance > max_keyframes_distance_) ||(rotation_diff > max_keyframes_angle_)||(last_kf_age > max_keyframes_time_))
   {
-    last_kf_tf = current_frame_tf;
     return true;
   }
   else

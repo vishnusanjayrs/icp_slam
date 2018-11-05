@@ -9,9 +9,11 @@ namespace icp_slam
 namespace utils
 {
 
-cv::Mat laserScanToPointMat(const sensor_msgs::LaserScanConstPtr &scan)
+cv::Mat laserScanToPointMat(const sensor_msgs::LaserScanConstPtr &laser_scan)
 {
-  // TODO
+  //get ranges array from laserscan
+	ranges_array = scan.ranges[];
+	auto range_size = (laser_scan.angle_max - laser_scan.angle_min) / laser_scan.angle_increment ;
 }
 
 cv::Mat transformPointMat(tf::Transform transform, cv::Mat &point_mat)

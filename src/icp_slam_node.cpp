@@ -57,13 +57,13 @@ protected:
   Mapper mapper_;
   nav_msgs::OccupancyGrid occupancy_grid_;
 
-
+  unsigned int keyframe_count_ = 0;
 
 };
 
 ICPSlamNode::ICPSlamNode() : local_nh_("~")
 {
-  laser_sub_ = global_nh_.subscribe("base_scan", 10, &ICPSlamNode::laserCallback, this);
+  laser_sub_ = global_nh_.subscribe("scan", 10, &ICPSlamNode::laserCallback, this);
   map_publisher_ = local_nh_.advertise<nav_msgs::OccupancyGrid>("map", 1);
 
   // getting ROS parameters:
@@ -111,29 +111,40 @@ void ICPSlamNode::laserCallback(const sensor_msgs::LaserScanConstPtr &laser_msg)
 {
 
   static ros::Time last_map_update(0, 0);
+  static ros::Time current_time(0,0);
 
   // TODO: get laser pose in odom frame (using tf)
   tf::StampedTransform tf_odom_laser;
 
-  // current pose
-  tf::StampedTransform tf_map_laser;
-  auto is_keyframe = icp_slam_->track(laser_msg, tf_odom_laser, tf_map_laser);
-  if (is_keyframe)
+  try 
   {
+    tf_listener_.lookupTransform("odom","base_link",current_time, tf_odom_laser);
+    // current pose
+    tf::StampedTransform tf_map_laser;
+    auto is_keyframe = icp_slam_->track(laser_msg, tf_odom_laser, tf_map_laser);
+    if (is_keyframe)
+    {
     //TODO: update the map
-  }
+    }
 
-  if (laser_msg->header.stamp - last_map_update > map_publish_interval_)
-  {
-    publishMap(laser_msg->header.stamp);
-  }
+    if (laser_msg->header.stamp - last_map_update > map_publish_interval_)
+    {
+      publishMap(laser_msg->header.stamp);
+    }
 
   // TODO: broadcast odom to map transform (using tf)
+  }
+  catch (tf::TransformException &ex) 
+  { 
+    ROS_ERROR("%s", ex.what());
+    ros::Duration(1.0).sleep();
+  }
 }
 
 void ICPSlamNode::publishMap(ros::Time timestamp)
 {
   // TODO: publish the occupancy grid map
+
 }
 
 int main(int argc, char **argv)
