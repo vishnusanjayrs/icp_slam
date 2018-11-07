@@ -121,7 +121,7 @@ void ICPSlamNode::laserCallback(const sensor_msgs::LaserScanConstPtr &laser_msg)
 
   try 
   {
-    tf_listener_.lookupTransform("odom","base_link",current_time, tf_odom_laser);
+    tf_listener_.lookupTransform(odom_frame_id_,laser_msg->header.frame_id,current_time, tf_odom_laser);
     // current pose
     tf::StampedTransform tf_map_laser;
     auto is_keyframe = icp_slam_->track(laser_msg, tf_odom_laser, tf_map_laser);

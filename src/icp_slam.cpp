@@ -22,7 +22,7 @@ ICPSlam::ICPSlam(tfScalar max_keyframes_distance, tfScalar max_keyframes_angle, 
   : max_keyframes_distance_(max_keyframes_distance),
     max_keyframes_angle_(max_keyframes_angle),
     max_keyframes_time_(max_keyframes_time),
-    last_kf_laser_scan_(new sensor_msgs::LaserScan()),
+    last_kf_pc_mat_(),
     is_tracker_running_(false)
 {
   last_kf_tf_odom_laser_.stamp_ = ros::Time(0);
@@ -54,9 +54,11 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
   if (isCreateKeyframe(current_frame_tf_odom_laser,last_kf_tf_odom_laser_))
   {
     ROS_INFO("keyframe created");
-    tf::StampedTransform map2laser;
-    auto T_1_odom 
-    map2laser=icpRegistration(laser_scan,current_frame_tf_odom_laser);
+    auto T_2_1 = current_frame_tf_odom_laser.inverse()*last_kf_tf_odom_laser_;
+    auto curr_point_mat_=utils::laserScanToPointMat(laser_scan);
+    tf::Transform map2laser=icpRegistration(last_kf_pc_mat_,curr_point_mat_,T_2_1);
+    last_kf_tf_odom_laser_ = current_frame_tf_odom_laser;
+    last_kf_pc_mat_ = curr_point_mat_;
   }
 
   // TODO: find the pose of laser in map frame
@@ -88,17 +90,16 @@ bool ICPSlam::isCreateKeyframe(const tf::StampedTransform &current_frame_tf, con
 
   auto last_kf_age = current_time - last_kf_time ;
 
-  ROS_INFO("robot pose: (%f, %f), %f",current_x,current_y, current_rotation);
-
+  
   if ((distance > max_keyframes_distance_) ||(rotation_diff > max_keyframes_angle_)||(last_kf_age > max_keyframes_time_))
   {
+    ROS_INFO("robot pose: (%f, %f), %f",current_x,current_y, current_rotation);
     return true;
   }
   else
   {
     return false;
   }
-  return false;
 }
 
 void ICPSlam::closestPoints(cv::Mat &point_mat1,
@@ -224,13 +225,26 @@ void ICPSlam::vizClosestPoints(cv::Mat &point_mat1,
   cv::imwrite("/tmp/icp_laser.png", img);
 }
 
-static icpRegistration(const sensor_msgs::LaserScanConstPtr &laser_scan,
-                       const tf::Transform &T_2_1)
+tf::Transform ICPSlam::icpRegistration(const cv::Mat &last_point_mat,
+                                              const cv::Mat &curr_point_mat,
+                                              const tf::Transform &T_2_1)
 {
-  cv::Mat point_mat1;
-  cv::Mat point_mat2;
-  point_mat1=last_kf_pc_mat_;
-  point_mat2=laserScanToPointMat(laser_scan);
+  cv::Mat point_mat1_=last_point_mat;
+  cv::Mat point_mat2_=curr_point_mat;
+
+  auto transformed_point_mat2_ = utils::transformPointMat(T_2_1,point_mat2_);
+
+  std::vector<int> closest_indices;
+  std::vector<float> closest_distances_2;
+
+  ICPSlam::closestPoints(point_mat1_,transformed_point_mat2_,closest_indices,closest_distances_2);
+
+  for(int i=0;i<50;i++)
+  {
+    ROS_INFO("index: (%i) = %i",i,closest_indices[i]);
+  }
+  vizClosestPoints(point_mat1_,point_mat2_,T_2_1);
+
 }
 
 } // namespace icp_slam

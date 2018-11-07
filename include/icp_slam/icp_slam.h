@@ -60,8 +60,11 @@ public:
    * @param T_2_1 estimated transform from scan2 to scan1 (T_scan2_scan1)
    * @return refined T_scan2_scan1
    */
-  static tf::Transform icpRegistration(const sensor_msgs::LaserScanConstPtr &laser_scan,
+  static tf::Transform icpRegistration(const cv::Mat &last_point_mat,
+                                       const cv::Mat &curr_point_mat,
                                        const tf::Transform &T_2_1);
+
+
 
   /**
    *
