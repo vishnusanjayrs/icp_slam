@@ -59,6 +59,9 @@ protected:
 
   unsigned int keyframe_count_ = 0;
 
+  boost::mutex laser_scan_mutex_;
+  sensor_msgs::LaserScan laser_scan_;    
+
 };
 
 ICPSlamNode::ICPSlamNode() : local_nh_("~")

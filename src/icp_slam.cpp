@@ -45,7 +45,7 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
   {
     last_kf_tf_odom_laser_ = current_frame_tf_odom_laser;
     last_kf_tf_map_laser_ = current_frame_tf_odom_laser;
-    last_kf_laser_scan_ = laser_scan;
+    last_kf_pc_mat_ = utils::laserScanToPointMat(laser_scan);
     tf_map_laser = current_frame_tf_odom_laser;
     ROS_INFO("First keyframe");
     keyframe_count_++;
@@ -55,7 +55,8 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
   {
     ROS_INFO("keyframe created");
     tf::StampedTransform map2laser;
-    map2laser=icpRegistration(last_kf_laser_scan_,laser_scan,&map2laser);
+    auto T_1_odom 
+    map2laser=icpRegistration(laser_scan,current_frame_tf_odom_laser);
   }
 
   // TODO: find the pose of laser in map frame
@@ -223,15 +224,13 @@ void ICPSlam::vizClosestPoints(cv::Mat &point_mat1,
   cv::imwrite("/tmp/icp_laser.png", img);
 }
 
-static icpRegistration(const sensor_msgs::LaserScanConstPtr &laser_scan1,
-                       const sensor_msgs::LaserScanConstPtr &laser_scan2,
-                       const tf::current_odom_tf &current_pose_from_odom,
+static icpRegistration(const sensor_msgs::LaserScanConstPtr &laser_scan,
                        const tf::Transform &T_2_1)
 {
   cv::Mat point_mat1;
   cv::Mat point_mat2;
-  point_mat1=laserScanToPointMat(laser_scan1);
-  point_mat2=laserScanToPointMat(laser_scan2);
+  point_mat1=last_kf_pc_mat_;
+  point_mat2=laserScanToPointMat(laser_scan);
 }
 
 } // namespace icp_slam

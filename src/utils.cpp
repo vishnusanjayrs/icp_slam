@@ -9,20 +9,21 @@ namespace icp_slam
 namespace utils
 {
 
-cv::Mat laserScanToPointMat(const sensor_msgs::LaserScanConstPtr &laser_scan)
+cv::Mat laserScanToPointMat(const sensor_msgs::LaserScanConstPtr &laser_scan_ptr)
 {
   //get ranges array from laserscan
+  sensor_msgs::LaserScan laser_scan = *laser_scan_ptr;
 	auto range_size = (laser_scan.angle_max - laser_scan.angle_min) / laser_scan.angle_increment ;
 	int row = (int)range_size;
 	int col = 2;
 	cv::Mat point_mat = cv::Mat(row,col,CV_32F);
   float x, y;
-  for(i=0;i<range_size;i++)
+  for(int i=0;i<range_size;i++)
   {
-    teta = laser_scan.angle_min + laser_scan.angle_increment;
+    auto teta = laser_scan.angle_min + laser_scan.angle_increment;
     if(laser_scan.ranges[i]>laser_scan.range_min)
     {
-    polarToCartesian(laser_scan.ranges[i], teta , &x, &y);
+    polarToCartesian(laser_scan.ranges[i], teta , x, y);
     }
     else
     {

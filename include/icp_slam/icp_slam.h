@@ -60,8 +60,7 @@ public:
    * @param T_2_1 estimated transform from scan2 to scan1 (T_scan2_scan1)
    * @return refined T_scan2_scan1
    */
-  static tf::Transform icpRegistration(const sensor_msgs::LaserScanConstPtr &laser_scan1,
-                                       const sensor_msgs::LaserScanConstPtr &laser_scan2,
+  static tf::Transform icpRegistration(const sensor_msgs::LaserScanConstPtr &laser_scan,
                                        const tf::Transform &T_2_1);
 
   /**
@@ -100,7 +99,7 @@ public:
 
 
 protected:
-  sensor_msgs::LaserScanPtr last_kf_laser_scan_;     ///< laser scan of last kf
+  cv::Mat last_kf_pc_mat_;     ///< last pointcloud matrix
   tf::StampedTransform last_kf_tf_odom_laser_;    ///< Transform in odom frame of last keyframe
   tf::StampedTransform last_kf_tf_map_laser_;     ///< Transform in map frame of last keyframe
 
