@@ -231,20 +231,176 @@ tf::Transform ICPSlam::icpRegistration(const cv::Mat &last_point_mat,
 {
   cv::Mat point_mat1_=last_point_mat;
   cv::Mat point_mat2_=curr_point_mat;
-
-  auto transformed_point_mat2_ = utils::transformPointMat(T_2_1,point_mat2_);
-
+  cv::Mat inlier_mat1=cv::Mat(1,2,CV_32F);
+  cv::Mat inlier_mat2=cv::Mat(1,2,CV_32F);
+  cv::Mat inlier_xy_mat=cv::Mat(1,2,CV_32F);
+  cv::Mat icp_mat1;
+  cv::Mat icp_mat2;
+  float mean;
+  float std_dev;
+  size_t vec_size;
   std::vector<int> closest_indices;
   std::vector<float> closest_distances_2;
+  int max_iterations = 10;
+  tfScalar last_x;
+  tfScalar last_y;
+  tfScalar last_r;
+  tfScalar curr_x;
+  tfScalar curr_y;
+  tfScalar curr_t;
+  float sum_1_x ;
+  float sum_2_x ;
+  float mean_1_x ;
+  float mean_2_x ;
+  float sum_1_y ;
+  float sum_2_y ;
+  float mean_1_y ; 
+  float mean_2_y ;
+  int match_idx;
+  int i;
+  float dist_thres;
+  tf::Transform transformed_point_mat2_;
+  cv::Mat x_mean=cv::Mat(2,1,CV_32F);
+  cv::Mat p_mean=cv::Mat(2,1,CV_32F); 
+  
 
-  ICPSlam::closestPoints(point_mat1_,transformed_point_mat2_,closest_indices,closest_distances_2);
 
-  for(int i=0;i<50;i++)
+  for (int iter=0;iter<max_iterations;i++)
   {
-    ROS_INFO("index: (%i) = %i",i,closest_indices[i]);
-  }
-  vizClosestPoints(point_mat1_,point_mat2_,T_2_1);
+    sum_1_x = 0.0;
+    sum_2_x = 0.0;
+    mean_1_x = 0.0;
+    mean_2_x = 0.0;
+    sum_1_y = 0.0;
+    sum_2_y = 0.0;
+    mean_1_y = 0.0; 
+    mean_2_y = 0.0;
+    transformed_point_mat2_ = utils::transformPointMat(T_2_1,point_mat2_);
+  
+    // get the closest point correspondence
+    ICPSlam::closestPoints(point_mat1_,transformed_point_mat2_,closest_indices,closest_distances_2);
 
+    for(i=0;i<50;i++)
+    {
+      ROS_INFO("index: (%i) = %i",i,closest_indices[i]);
+    }
+    //vizClosestPoints(point_mat1_,point_mat2_,T_2_1);
+  
+    //get inliers
+    utils::meanAndStdDev(closest_distances_2,mean,std_dev);
+    vec_size = closest_indices.size();
+    dist_thres = mean +(2*std_dev);
+    match_idx=0;
+    for(i=0;i<vec_size;i++)
+    {
+      ///distance less than threshold or when indices are valid or any one xs are not 0.0(special case less than range_min) are added to a new matrix
+      if(closest_distances_2[i]<dist_thres || closest_indices[i] != -1 || point_mat1_[i][0]!=0.0||point_mat2_[closest_indices[i]]!=0.0)
+      {
+        if(match_idx==0)
+        {
+          inlier_mat1.at<float>(0,0) = point_mat1_[i][0];
+          sum_1_x = sum_1_x+point_mat1_[i][0];
+          
+          inlier_mat1.at<float>(0,1) = point_mat1_[i][1];
+          sum_1_y=sum_1_y+point_mat1_[i][1];
+
+
+          inlier_mat2.at<float>(0,0) = point_mat2_[closest_indices[i]][0];
+          sum_2_x=sum_2_x+point_mat2_[closest_indices[i]][0];
+          
+          inlier_mat2.at<float>(0,1) = point_mat2_[closest_indices[i]][1];
+          sum_2_y=sum_2_y+point_mat2_[closest_indices[i]][1];
+
+        }
+        else
+        {
+          inlier_xy_mat.at<float>(0,0) = point_mat1_[i][0];
+          sum_1_x = sum_1_x+point_mat1_[i][0];
+
+          inlier_xy_mat.at<float>(0,1) = point_mat1_[i][1];
+          sum_1_y=sum_1_y+point_mat1_[i][1];
+
+          inlier_mat1.push_back(inlier_xy_mat);
+
+          inlier_xy_mat.at<float>(0,0) = point_mat2_[closest_indices[i]][0];
+          sum_2_x=sum_2_x+point_mat2_[closest_indices[i]][0];
+
+          inlier_xy_mat.at<float>(0,1) = point_mat2_[closest_indices[i]][1];
+          sum_2_y=sum_2_y+point_mat2_[closest_indices[i]][1];
+
+          inlier_mat2.push_back(inlier_xy_mat);
+        }
+        
+        match_idx++;
+      }
+    }
+    mean_1_x=sum_1_x/(match_idx-1);
+    mean_1_y=sum_1_y/(match_idx-1);
+    mean_2_x=sum_2_x/(match_idx-1);
+    mean_2_y=sum_2_y/(match_idx-1);
+    icp_mat1=cv::Mat((match_idx-1),2,CV_32F);
+    icp_mat2=cv::Mat((match_idx-1),2,CV_32F);
+    for(i=0;i<match_idx;i++)
+    {
+      icp_mat1.at<float>(i,0)=inlier_mat1[i][0]-mean_1_x;
+      icp_mat1.at<float>(i,1)=inlier_mat1[i][1]-mean_1_y;
+
+      icp_mat2.at<float>(i,0)=inlier_mat1[i][0]-mean_2_x;
+      icp_mat2.at<float>(i,1)=inlier_mat1[i][1]-mean_2_y;
+
+    }
+
+
+    auto last_T_2_1 = T_2_1;
+
+    x_mean.at<float>(0,0)= mean_1_x;
+    x_mean.at<float>(1,0)= mean_1_y;
+
+    p_mean.at<float>(0,0)= mean_2_x;
+    p_mean.at<float>(1,0)= mean_2_y;
+
+
+    tf::transform T_2_1 = icpIteration(icp_mat1,icp_mat2,x_mean,p_mean);
+
+    last_x = last_T_2_1.getOrigin().getX();
+    last_y = last_T_2_1.getOrigin().getY();
+    last_r = tf::getYaw(last_T_2_1.getRotation()) * 180/M_PI;
+
+    curr_x = T_2_1.getOrigin().getX();
+    curr_y = T_2_1.getOrigin().getY();
+    curr_r = tf::getYaw(T_2_1.getRotation()) * 180/M_PI;
+
+    if (last_x == curr_x && last_y =curr_y && last_r==curr_r)
+    {
+      return T_2_1;
+    }
+  }
+  //transform the point_cloud2 to point_cloud1 using initial odom pose
+return T_2_1;
+}
+
+tf::Transform ICPSlam::icpIteration(cv::Mat &point_mat1,
+                                    cv::Mat &point_mat2,
+                                    cv::Mat &x_mean,
+                                    cv::Mat &p_mean)
+{
+  cv::Mat W=cv::Mat::zeros(2,2,CV_32F);
+  int nrows=point_mat2.rows;
+  for (int i=0;i<nrows;i++)
+  {
+    W=W+((point_mat1.row(i).t())*(point_mat2.row(i)));
+  }
+
+  cv::SVD svd(W);
+
+  auto R_matrix = svd.u*svd.vt;
+  auto T_matrix = x_mean-(R*p_mean);
+
+  auto rotation_angle = std::acos(R_matrix[0][0]);
+
+  
+  
+  
 }
 
 } // namespace icp_slam

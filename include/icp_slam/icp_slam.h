@@ -73,7 +73,10 @@ public:
    * @return estimated transform from scan2 to scan1 (T_scan2_scan1) that minimizes least square alignment error
    */
   static tf::Transform icpIteration(cv::Mat &point_mat1,
-                                    cv::Mat &point_mat2);
+                                    cv::Mat &point_mat2,
+                                    cv::Mat &x_mean,
+                                    cv::Mat &p_mean
+                                    );
 
   /**
    * @brief find closest indices in two matrix of 2d points (in the same coordinate frame)
