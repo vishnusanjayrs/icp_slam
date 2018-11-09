@@ -83,7 +83,7 @@ ICPSlamNode::ICPSlamNode() : local_nh_("~")
   double max_keyframes_distance;
   double max_keyframes_angle;
   double max_keyframes_time;
-  local_nh_.param<double>("max_keyframes_distance", max_keyframes_distance, 0.02);
+  local_nh_.param<double>("max_keyframes_distance", max_keyframes_distance, 0.5);
   local_nh_.param<double>("max_keyframes_angle", max_keyframes_angle, 0.01);
   local_nh_.param<double>("max_keyframes_time", max_keyframes_time, 0.5);
 
@@ -125,6 +125,10 @@ void ICPSlamNode::laserCallback(const sensor_msgs::LaserScanConstPtr &laser_msg)
     // current pose
     tf::StampedTransform tf_map_laser;
     auto is_keyframe = icp_slam_->track(laser_msg, tf_odom_laser, tf_map_laser);
+    tf::Transform tf_odom_map = tf_odom_laser*tf_map_laser.inverse();
+    tf::StampedTransform stf_odom_map=tf::StampedTransform(tf_odom_map,tf_odom_laser.stamp_,map_frame_id_,odom_frame_id_);
+    tf_broadcaster_.sendTransform(stf_odom_map);
+
     if (is_keyframe)
     {
     //TODO: update the map
