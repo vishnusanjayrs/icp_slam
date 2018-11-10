@@ -125,13 +125,14 @@ void ICPSlamNode::laserCallback(const sensor_msgs::LaserScanConstPtr &laser_msg)
     // current pose
     tf::StampedTransform tf_map_laser;
     auto is_keyframe = icp_slam_->track(laser_msg, tf_odom_laser, tf_map_laser);
-    tf::Transform tf_odom_map = tf_odom_laser*tf_map_laser.inverse();
-    tf::StampedTransform stf_odom_map=tf::StampedTransform(tf_odom_map,tf_odom_laser.stamp_,map_frame_id_,odom_frame_id_);
+    tf::Transform tf_odom_map = tf_map_laser*tf_odom_laser.inverse();
+    tf::StampedTransform stf_odom_map=tf::StampedTransform(tf_odom_map,ros::Time::now(),map_frame_id_,odom_frame_id_);
     tf_broadcaster_.sendTransform(stf_odom_map);
 
     if (is_keyframe)
     {
     //TODO: update the map
+    tf::StampedTransform stf_odom_map=tf::StampedTransform(tf_map_laser,ros::Time::now(),map_frame_id_,laser_msg->header.frame_id);
     }
 
     if (laser_msg->header.stamp - last_map_update > map_publish_interval_)

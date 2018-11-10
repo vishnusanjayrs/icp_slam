@@ -100,7 +100,8 @@ public:
    */
   static void vizClosestPoints(cv::Mat &point_mat1,
                                cv::Mat &point_mat2,
-                               const tf::Transform &T_2_1);
+                               const tf::Transform &T_2_1,
+                               int iteration);
 
 
 
