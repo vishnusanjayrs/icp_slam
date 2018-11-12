@@ -84,7 +84,7 @@ ICPSlamNode::ICPSlamNode() : local_nh_("~")
   double max_keyframes_angle;
   double max_keyframes_time;
   local_nh_.param<double>("max_keyframes_distance", max_keyframes_distance, 0.5);
-  local_nh_.param<double>("max_keyframes_angle", max_keyframes_angle, 0.01);
+  local_nh_.param<double>("max_keyframes_angle", max_keyframes_angle, 0.1);
   local_nh_.param<double>("max_keyframes_time", max_keyframes_time, 0.5);
 
   local_nh_.param("resolution",  resolution_, 0.05);
@@ -108,6 +108,11 @@ ICPSlamNode::ICPSlamNode() : local_nh_("~")
   occupancy_grid_.info.origin.position.y = y_min_;
   occupancy_grid_.info.origin.orientation.w = 1;
 
+  width_ = (unsigned int)((x_max_-x_min_)/resolution_);
+  height_=(unsigned int)((y_max_- y_min_)/resolution_);
+
+  mapper_.initMap(width_,height_,resolution_,origin_x_,origin_y_);
+
 }
 
 void ICPSlamNode::laserCallback(const sensor_msgs::LaserScanConstPtr &laser_msg)
@@ -118,34 +123,41 @@ void ICPSlamNode::laserCallback(const sensor_msgs::LaserScanConstPtr &laser_msg)
 
   // TODO: get laser pose in odom frame (using tf)
   tf::StampedTransform tf_odom_laser;
-
-  try 
+  try
   {
     tf_listener_.lookupTransform(odom_frame_id_,laser_msg->header.frame_id,current_time, tf_odom_laser);
     // current pose
     tf::StampedTransform tf_map_laser;
     auto is_keyframe = icp_slam_->track(laser_msg, tf_odom_laser, tf_map_laser);
-    tf::Transform tf_odom_map = tf_map_laser*tf_odom_laser.inverse();
-    tf::StampedTransform stf_odom_map=tf::StampedTransform(tf_odom_map,ros::Time::now(),map_frame_id_,odom_frame_id_);
-    tf_broadcaster_.sendTransform(stf_odom_map);
+  
+  // current pose
+  //tf::StampedTransform tf_map_laser;
 
+    //auto is_keyframe = icp_slam_->track(laser_msg, tf_odom_laser, tf_map_laser);
     if (is_keyframe)
     {
-    //TODO: update the map
-    tf::StampedTransform stf_odom_map=tf::StampedTransform(tf_map_laser,ros::Time::now(),map_frame_id_,laser_msg->header.frame_id);
+      //TODO: update the map
+      tf::StampedTransform stf_map_laser=tf::StampedTransform(tf_map_laser,ros::Time::now(),map_frame_id_,laser_msg->header.frame_id);
+      //tf_broadcaster_.sendTransform(stf_map_laser);
     }
 
     if (laser_msg->header.stamp - last_map_update > map_publish_interval_)
     {
-      publishMap(laser_msg->header.stamp);
+      //mapper_.updateMap(laser_msg, tf_map_laser);
+      //publishMap(laser_msg->header.stamp);
     }
 
-  // TODO: broadcast odom to map transform (using tf)
+    // TODO: broadcast odom to map transform (using tf)
+    tf::Transform tf_odom_map = tf_map_laser*tf_odom_laser.inverse();
+    tf::StampedTransform stf_odom_map=tf::StampedTransform(tf_odom_map,ros::Time::now(),map_frame_id_,odom_frame_id_);
+    tf_broadcaster_.sendTransform(stf_odom_map);
+    
   }
-  catch (tf::TransformException &ex) 
-  { 
-    ROS_ERROR("%s", ex.what());
+  catch (tf::TransformException &ex)
+  {
+    ROS_ERROR("%s",ex.what());
     ros::Duration(1.0).sleep();
+    return;
   }
 }
 

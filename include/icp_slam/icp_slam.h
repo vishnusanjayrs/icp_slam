@@ -117,7 +117,7 @@ protected:
 
   boost::atomic_bool is_tracker_running_;
 
-  unsigned int keyframe_count_ = 0;
+  //unsigned int keyframe_count_ = 0;
 
 }; // class ICPSlam
 } // namespace icp_slam

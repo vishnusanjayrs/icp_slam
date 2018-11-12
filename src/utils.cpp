@@ -26,7 +26,7 @@ cv::Mat laserScanToPointMat(const sensor_msgs::LaserScanConstPtr &laser_scan_ptr
   {
     teta = teta + laser_scan.angle_increment;
     ///ROS_INFO("ranges : (%i),angle %f  is %f ",i,teta,laser_scan.ranges[i]);
-    if(laser_scan.ranges[i]>laser_scan.range_min)
+    if((laser_scan.ranges[i]>laser_scan.range_min)&&(laser_scan.ranges[i]<laser_scan.range_max))
     {
     polarToCartesian(laser_scan.ranges[i], teta , x, y);
     //row_cnt++;

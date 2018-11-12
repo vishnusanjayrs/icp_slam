@@ -35,9 +35,88 @@ static const unsigned char LETHAL_OBSTACLE = 100;
 
 class Mapper
 {
-  // TODO
-};
+public:
 
+  typedef struct
+  {
+    double x;
+    double y;
+    double a;
+  } robot_pose_t;
+
+  typedef boost::recursive_mutex mutex_t;
+
+  Mapper();
+
+  cv::Mat getMapCopy();
+
+  int getWidth() { return width_; }
+
+  int getHeight() { return height_; }
+
+  bool isInitialized() { return is_initialized_; }
+
+  mutex_t& getMutex() { return mutex_; }
+
+  /**
+   *
+   * @param width width of map in meters
+   * @param height height of map in meters
+   * @param resolution meters/pixel in map
+   * @param unknown_cost_value value to initialize the map with (the map is unknown at the beginning)
+   */
+  void initMap(int width, int height, float resolution,
+               double origin_x_meters, double origin_y_meters,
+               uint8_t *pointer=nullptr, unsigned char unknown_cost_value=NO_INFORMATION);
+
+  // @return: 1 - success, 0 - failure
+  int updateMap(const sensor_msgs::LaserScanConstPtr &laser_scan,
+                const tf::StampedTransform &pose);
+
+  int updateLaserScan(const sensor_msgs::LaserScanConstPtr &laser_scan, robot_pose_t robot_pose);
+
+  int drawScanLine(int x1, int y1, int x2, int y2);
+
+  robot_pose_t getRobotPose(tf::StampedTransform &tf_map_laser) { return robot_pose_; }
+
+  cv::point getRobotpoints(robot_pose_t &init_pose,
+							robot_pose_t &current_pose);
+
+  // utilities
+  /**
+   * @brief convert coords from continuous world coordinate to discrete image coord
+   */
+  int convertToGridCoords(double x, double y, int &grid_x, int &grid_y);
+
+  /**
+   * @brief convert coords from continuous world coordinate to discrete image coord
+   */
+  int convertToWorldCoords(int grid_x, int grid_y, double &x, double &y);
+
+  static robot_pose_t poseFromGeometryPoseMsg(const geometry_msgs::Pose &pose_msg);
+  static robot_pose_t poseFromTf(const tf::StampedTransform &tf_pose);
+
+protected:
+  mutex_t mutex_;
+  boost::atomic_bool is_initialized_;
+
+  cv::Mat map_;
+  cv::Mat relative_map_;
+
+  int width_;
+  int height_;
+  float resolution_;  ///< @brief meters/pixels
+
+  double origin_x_; ///< origin of the map in meters
+  double origin_y_; ///< origin of the map in meters
+
+  robot_pose_t robot_pose_;
+  robot_pose_t init_robot_pose_;
+
+  int init_robot_pt_x ;
+  int init_robot_pt_y ;
+
+};
 } // namespace icp_slam
 
 #endif //ICP_SLAM_MAPPER_H
