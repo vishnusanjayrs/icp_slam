@@ -77,9 +77,20 @@ public:
 
   int drawScanLine(int x1, int y1, int x2, int y2);
 
-  robot_pose_t getRobotPose(tf::StampedTransform &tf_map_laser) { return robot_pose_; }
+  template <class T>
+  static T normalizeTo360Angle(T angle)
+  {
+    auto out_angle = std::fmod(angle, 2*M_PI);
+    if (out_angle < 0)
+    {
+      out_angle += 2*M_PI;
+    }
+    return out_angle;
+  }
 
-  cv::point getRobotpoints(robot_pose_t &init_pose,
+  robot_pose_t getRobotPose() { return robot_pose_; }
+
+  cv::Point2d getRobotpoints(robot_pose_t &init_pose,
 							robot_pose_t &current_pose);
 
   // utilities
@@ -93,8 +104,11 @@ public:
    */
   int convertToWorldCoords(int grid_x, int grid_y, double &x, double &y);
 
-  static robot_pose_t poseFromGeometryPoseMsg(const geometry_msgs::Pose &pose_msg);
-  static robot_pose_t poseFromTf(const tf::StampedTransform &tf_pose);
+  robot_pose_t poseFromGeometryPoseMsg(const geometry_msgs::Pose &pose_msg);
+  robot_pose_t poseFromTf(const tf::StampedTransform &tf_pose);
+
+  cv::Mat getLaserpoints(const sensor_msgs::LaserScanConstPtr &laser_scan_ptr,
+                               const Mapper::robot_pose_t &current_pose);
 
 protected:
   mutex_t mutex_;
@@ -115,6 +129,8 @@ protected:
 
   int init_robot_pt_x ;
   int init_robot_pt_y ;
+
+  cv::Point2d init_robot_grid_pts;
 
 };
 } // namespace icp_slam
