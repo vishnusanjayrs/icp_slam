@@ -144,14 +144,15 @@ void ICPSlamNode::laserCallback(const sensor_msgs::LaserScanConstPtr &laser_msg)
     if (is_keyframe)
     {
       //TODO: update the map
-      tf::StampedTransform stf_map_laser=tf::StampedTransform(tf_map_laser,ros::Time::now(),map_frame_id_,laser_msg->header.frame_id);
-      //tf_broadcaster_.sendTransform(stf_map_laser);
-      if (laser_msg->header.stamp - last_map_update > map_publish_interval_)
-      {
-      mapper_.updateMap(laser_msg, tf_map_laser);
+      //tf::StampedTransform stf_map_laser=tf::StampedTransform(tf_map_laser,ros::Time::now(),map_frame_id_,laser_msg->header.frame_id);
+      mapper_.updateMap(laser_msg, tf_odom_laser);
       publishMap(laser_msg->header.stamp);
-      last_map_update=ros::Time::now();
-      }
+      //tf_broadcaster_.sendTransform(stf_map_laser);
+      // if (laser_msg->header.stamp - last_map_update > map_publish_interval_)
+      // {
+        
+      //   last_map_update=ros::Time::now();
+      // }
     }
 
     
@@ -182,7 +183,7 @@ void ICPSlamNode::publishMap(ros::Time timestamp)
 
   occupancy_grid_.header.stamp = timestamp;
   // TODO: use map frame
-  occupancy_grid_.header.frame_id = map_frame_id_;
+  occupancy_grid_.header.frame_id = odom_frame_id_;
 
   memcpy(occupancy_grid_.data.data(), map.data, map.total()*sizeof(int8_t));
   //cout<<"ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss"<<endl;

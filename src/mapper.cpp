@@ -65,12 +65,12 @@ cv::Point2d Mapper::getRobotpoints(robot_pose_t &init_pose,
 							robot_pose_t &current_pose)
 {
 	cv::Point2d robot;
-  cout<<"robot pose"<<current_pose.x<<current_pose.y<<endl;
+  //cout<<"robot pose"<<current_pose.x<<current_pose.y<<endl;
 	double point_x=(double)current_pose.x/resolution_;
 	double point_y=(double)current_pose.y/resolution_;
 	robot=cv::Point2d(point_x,point_y);
-  cout<<"robot pose points"<<endl;
-  cout<<robot.x<<robot.y<<endl;
+  // cout<<"robot pose points"<<endl;
+  // cout<<robot.x<<robot.y<<endl;
 	return robot; 
 }
 
@@ -87,40 +87,24 @@ cv::Point2d Mapper::getRobotpoints(robot_pose_t &init_pose,
 cv::Mat Mapper::getLaserpoints(const sensor_msgs::LaserScanConstPtr &laser_scan_ptr,
                                const Mapper::robot_pose_t &current_pose)
 {
-  double rotation = 0;
+  double rotation = current_pose.a;
   sensor_msgs::LaserScan laser_scan = *laser_scan_ptr;
   auto range_size = (laser_scan.angle_max - laser_scan.angle_min) / laser_scan.angle_increment ;
   cv::Mat point_mat = cv::Mat(1,2,CV_32F);
   cv::Mat temp_mat = cv::Mat(1,2,CV_32F);
   float x, y;
   bool normalise;
-  float teta; 
-  float orig_teta=laser_scan.angle_min;
-  if (laser_scan.angle_min!=0)
-  {
-    normalise = true;
-    //cout<<"asdfasssssssssssssssssssssssssssssssssssssssssssssssss"<<endl;
-  }
+  float tetha; 
+  float init_angle=laser_scan.angle_min+rotation;
   int idx=0;
   //int row_cnt=0;
   for(int i=0;i<range_size;i++)
   {
-    orig_teta = laser_scan.angle_min + laser_scan.angle_increment*i;
-    // if (normalise)
-    // {
-    //   teta = normalizeTo360Angle(orig_teta);
-    // }
-
-    
-    // if (teta>2*M_PI)
-    // {
-    //   orig_teta = laser_scan.angle_increment;
-    // }
-    ///ROS_INFO("ranges : (%i),angle %f  is %f ",i,teta,laser_scan.ranges[i]);
+    tetha = init_angle + laser_scan.angle_increment*i;
     if((laser_scan.ranges[i]>laser_scan.range_min)&&(laser_scan.ranges[i]<laser_scan.range_max))
     {
-      cout<<"Ranges"<<laser_scan.ranges[i]<<endl;
-      utils::polarToCartesian(laser_scan.ranges[i], orig_teta , x, y);
+      // cout<<"Ranges"<<laser_scan.ranges[i]<<endl;
+      utils::polarToCartesian(laser_scan.ranges[i], tetha , x, y);
       if (idx==0)
       {
         point_mat.at<float>(i, 0)=round(x/resolution_);
@@ -148,8 +132,8 @@ int Mapper::updateMap(const sensor_msgs::LaserScanConstPtr &laser_scan,
   Mapper::robot_pose_t current_pose= Mapper::poseFromTf(pose);
   cv::Point2d robot_points = Mapper::getRobotpoints(init_robot_pose_,current_pose);
   cv::Point2d robot_grid_points = init_robot_grid_pts + robot_points;
-  cout<<"robot points"<<endl;
-  cout<<robot_grid_points.x<<robot_grid_points.y<<endl;
+  //cout<<"robot points"<<endl;
+  //cout<<robot_grid_points.x<<robot_grid_points.y<<endl;
 
   cv::Mat laser_points = Mapper::getLaserpoints(laser_scan,current_pose);
 
@@ -161,7 +145,7 @@ int Mapper::updateMap(const sensor_msgs::LaserScanConstPtr &laser_scan,
     
     cv::Point2d laser_grid_pt = robot_grid_points+laser_pt;
 
-    cout<<"robot points"<<laser_grid_pt.x<<laser_grid_pt.y<<endl;
+    // cout<<"robot points"<<laser_grid_pt.x<<laser_grid_pt.y<<endl;
 
     //cout<<laser_grid_pt<<endl;
 
@@ -198,11 +182,11 @@ int Mapper::updateMap(const sensor_msgs::LaserScanConstPtr &laser_scan,
   {
     for(int j=0;j<width_;j++)
     {
-      if (relative_map_.at<int8_t>(i,j) > 10)
+      if (relative_map_.at<int8_t>(i,j) > 5)
       {
         map_.at<int8_t>(i,j)=(int8_t)LETHAL_OBSTACLE;
       }
-      else if(relative_map_.at<int8_t>(i,j) < -10)
+      else if(relative_map_.at<int8_t>(i,j) < -5)
       {
         map_.at<int8_t>(i,j)=(int8_t)FREE_SPACE;
       }
