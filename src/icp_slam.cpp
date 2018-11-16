@@ -71,19 +71,22 @@ bool ICPSlam::track(const sensor_msgs::LaserScanConstPtr &laser_scan,
     last_kf_tf_odom_laser_=current_frame_tf_odom_laser; 
     last_kf_pc_mat_ = utils::laserScanToPointMat(laser_scan);
     keyframe_count_++;
+    is_tracker_running_=false;
+    return true;
   }
   else
   {
     auto T_2_1 = last_kf_tf_odom_laser_.inverse()*current_frame_tf_odom_laser;
     tf::Transform tf_map_laser_out = last_kf_tf_map_laser_*T_2_1;
     tf_map_laser=tf::StampedTransform(tf_map_laser_out,current_frame_tf_odom_laser.stamp_,"map",laser_scan->header.frame_id);
+    is_tracker_running_=false;
+    return false;
   }
 
   // TODO: find the pose of laser in map frame
   // if a new keyframe is created, run ICP
   // if not a keyframe, obtain the laser pose in map frame based on odometry update
-  is_tracker_running_=false;
-  return false;
+  // return false;
 }
 
 bool ICPSlam::isCreateKeyframe(const tf::StampedTransform &current_frame_tf, const tf::StampedTransform &last_kf_tf) const
